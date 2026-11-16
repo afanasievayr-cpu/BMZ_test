@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Конфигуратор БМЗ — Дашборд</title>
+<style>
+  :root{
+    --bg:#0f1419; --panel:#1a2129; --panel2:#222b35; --border:#2e3a46;
+    --text:#e6edf3; --muted:#8b98a5; --accent:#4A90E2; --green:#50C878;
+    --yellow:#F39C12; --red:#E74C3C; --purple:#9B59B6; --cyan:#22d3ee; --orange:#FFB84D;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
+    background:var(--bg);color:var(--text);padding:24px;line-height:1.5}
+  .header{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:12px;margin-bottom:24px}
+  .header h1{font-size:28px;font-weight:700;letter-spacing:-.5px}
+  .header h1 span{color:var(--accent)}
+  .header .sub{color:var(--muted);font-size:14px;margin-top:4px}
+  .badge{display:inline-block;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600}
+  .badge.ok{background:rgba(80,200,120,.15);color:var(--green);border:1px solid rgba(80,200,120,.3)}
+  .badge.warn{background:rgba(243,156,18,.15);color:var(--yellow);border:1px solid rgba(243,156,18,.3)}
+  .badge.err{background:rgba(231,76,60,.15);color:var(--red);border:1px solid rgba(231,76,60,.3)}
+  .badge.info{background:rgba(74,144,226,.15);color:var(--accent);border:1px solid rgba(74,144,226,.3)}
+
+  .grid{display:grid;gap:16px}
+  .kpis{grid-template-columns:repeat(auto-fit,minmax(170px,1fr));margin-bottom:24px}
+  .kpi{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:18px;position:relative;overflow:hidden}
+  .kpi::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--accent)}
+  .kpi.g::before{background:var(--green)} .kpi.y::before{background:var(--yellow)}
+  .kpi.r::before{background:var(--red)} .kpi.p::before{background:var(--purple)}
+  .kpi .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px}
+  .kpi .value{font-size:30px;font-weight:700;line-height:1}
+  .kpi .value small{font-size:14px;color:var(--muted);font-weight:500}
+  .kpi .hint{font-size:11px;color:var(--muted);margin-top:6px}
+
+  .cols{grid-template-columns:1.5fr 1fr}
+  .cols3{grid-template-columns:1fr 1fr 1fr}
+  @media(max-width:960px){.cols,.cols3{grid-template-columns:1fr}}
+
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:20px;margin-bottom:16px}
+  .card h2{font-size:15px;margin-bottom:16px;display:flex;align-items:center;gap:8px}
+  .card h2 .dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0}
+  .card h2 .count{margin-left:auto;font-size:12px;color:var(--muted);font-weight:500}
+
+  /* Палитра модулей */
+  .palette{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}
+  .mod{background:var(--panel2);border-radius:10px;padding:12px;border-left:4px solid var(--accent);transition:transform .15s}
+  .mod:hover{transform:translateY(-2px)}
+  .mod .ico{font-size:22px;margin-bottom:4px}
+  .mod .nm{font-weight:600;font-size:12px;margin-bottom:2px}
+  .mod .sz{font-size:10px;color:var(--muted)}
+  .mod .ar{font-size:10px;color:var(--cyan);margin-top:4px}
+
+  /* Список модулей проекта */
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;color:var(--muted);font-weight:600;font-size:10px;text-transform:uppercase;letter-spacing:.5px;padding:8px 10px;border-bottom:1px solid var(--border)}
+  td{padding:10px;border-bottom:1px solid var(--border)}
+  tr:last-child td{border-bottom:none}
+  tr:hover td{background:var(--panel2)}
+  .swatch{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:middle}
+
+  /* Валидация */
+  .val{display:flex;gap:12px;padding:12px;border-radius:8px;background:var(--panel2);margin-bottom:8px;align-items:flex-start}
+  .val .ic{font-size:16px;flex-shrink:0;line-height:1.2}
+  .val .t{font-weight:600;font-size:13px;margin-bottom:2px}
+  .val .d{font-size:11px;color:var(--muted)}
+  .val.err{border-left:3px solid var(--red)}
+  .val.warn{border-left:3px solid var(--yellow)}
+  .val.ok{border-left:3px solid var(--green)}
+
+  /* Статистика */
+  .stat{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px}
+  .stat:last-child{border-bottom:none}
+  .stat .k{color:var(--muted)}
+  .stat .v{font-weight:600}
+  .stat .v.g{color:var(--green)} .stat .v.y{color:var(--yellow)} .stat .v.r{color:var(--red)}
+
+  /* Смета */
+  .estimate{background:var(--panel2);border-radius:10px;padding:16px}
+  .est-row{display:flex;justify-content:space-between;padding:7px 0;font-size:13px}
+  .est-row .k{color:var(--muted)}
+  .est-row.total{border-top:1px solid var(--border);margin-top:6px;padding-top:12px;font-weight:700;font-size:15px}
+  .est-row.total .v{color:var(--green)}
+  .est-row.vat{color:var(--muted);font-size:12px}
+
+  /* Инженерные системы */
+  .sys{display:flex;flex-wrap:wrap;gap:8px}
+  .sys .chip{background:var(--panel2);border:1px solid var(--border);border-radius:20px;padding:6px 12px;font-size:12px;display:flex;align-items:center;gap:6px}
+  .sys .chip.on{border-color:rgba(80,200,120,.4);background:rgba(80,200,120,.1)}
+  .sys .chip.on .st{color:var(--green)}
+  .sys .chip .st{color:var(--muted)}
+
+  .footer{margin-top:24px;text-align:center;color:var(--muted);font-size:12px}
+  .divider{height:1px;background:var(--border);margin:16px 0}
+  code{background:var(--panel2);padding:1px 5px;border-radius:4px;font-size:12px;color:var(--cyan)}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>Конфигуратор <span>БМЗ</span></h1>
+    <div class="sub">Блочно-модульные здания · планировка · валидация · смета</div>
+  </div>
+  <div>
+    <span class="badge ok">● Проект активен</span>
+    <span class="badge info">v0.9 · демо</span>
+  </div>
+</div>
+
+<!-- KPI -->
+<div class="grid kpis">
+  <div class="kpi">
+    <div class="label">Модулей в проекте</div>
+    <div class="value">7</div>
+    <div class="hint">из библиотеки 6 типов</div>
+  </div>
+  <div class="kpi g">
+    <div class="label">Общая площадь</div>
+    <div class="value">102.6 <small>м²</small></div>
+    <div class="hint">полезная, без перегородок</div>
+  </div>
+  <div class="kpi p">
+    <div class="label">Объём</div>
+    <div class="value">287.3 <small>м³</small></div>
+    <div class="hint">по внешним габаритам</div>
+  </div>
+  <div class="kpi y">
+    <div class="label">Вместимость</div>
+    <div class="value">31 <small>чел.</small></div>
+    <div class="hint">по maxOccupancy</div>
+  </div>
+  <div class="kpi r">
+    <div class="label">Замечаний</div>
+    <div class="value">4</div>
+    <div class="hint">1 ошибка · 3 предупр.</div>
+  </div>
+</div>
+
+<!-- Палитра + модули проекта -->
+<div class="grid cols">
+  <div class="card">
+    <h2><span class="dot"></span>Библиотека модулей<span class="count">6 типов</span></h2>
+    <div class="palette">
+      <div class="mod" style="border-left-color:#4A90E2">
+        <div class="ico">🏢</div><div class="nm">Офис стандарт</div><div class="sz">3×6×2.8 м</div><div class="ar">36 м² · 4 чел.</div>
+      </div>
+      <div class="mod" style="border-left-color:#50C878">
+        <div class="ico">🚿</div><div class="nm">Санузел</div><div class="sz">2.4×3×2.8 м</div><div class="ar">7.2 м² · 1 чел.</div>
+      </div>
+      <div class="mod" style="border-left-color:#FFB84D">
+        <div class="ico">🚪</div><div class="nm">Коридор</div><div class="sz">1.5×6×2.8 м</div><div class="ar">9 м² · 10 чел.</div>
+      </div>
+      <div class="mod" style="border-left-color:#E74C3C">
+        <div class="ico">🖥</div><div class="nm">Серверная</div><div class="sz">3×3×2.8 м</div><div class="ar">9 м² · 2 чел.</div>
+      </div>
+      <div class="mod" style="border-left-color:#9B59B6">
+        <div class="ico">🛏</div><div class="nm">Спальня</div><div class="sz">3×6×2.8 м</div><div class="ar">18 м² · 2 чел.</div>
+      </div>
+      <div class="mod" style="border-left-color:#F39C12">
+        <div class="ico">🍳</div><div class="nm">Кухня-столовая</div><div class="sz">3×6×2.8 м</div><div class="ar">18 м² · 8 чел.</div>
+      </div>
+    </div>
+    <div class="divider"></div>
+    <div style="font-size:12px;color:var(--muted)">
+      Сетка <code>0.3 м</code> · масштаб <code>50 px/м</code> · поворот <code>0/90/180/270°</code>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:var(--green)"></span>Размещено в проекте</h2>
+    <table>
+      <thead><tr><th>Модуль</th><th>Поз.</th><th>Пов.</th></tr></thead>
+      <tbody>
+        <tr><td><span class="swatch" style="background:#4A90E2"></span>Офис стандарт</td><td>0, 0</td><td>0°</td></tr>
+        <tr><td><span class="swatch" style="background:#4A90E2"></span>Офис стандарт</td><td>6, 0</td><td>0°</td></tr>
+        <tr><td><span class="swatch" style="background:#FFB84D"></span>Коридор</td><td>12, 0</td><td>90°</td></tr>
+        <tr><td><span class="swatch" style="background:#50C878"></span>Санузел</td><td>12, 6</td><td>0°</td></tr>
+        <tr><td><span class="swatch" style="background:#E74C3C"></span>Серверная</td><td>15, 6</td><td>0°</td></tr>
+        <tr><td><span class="swatch" style="background:#9B59B6"></span>Спальня</td><td>0, 6</td><td>0°</td></tr>
+        <tr><td><span class="swatch" style="background:#F39C12"></span>Кухня-столовая</td><td>6, 6</td><td>0°</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Валидация + инженерия + смета -->
+<div class="grid cols3">
+  <div class="card">
+    <h2><span class="dot" style="background:var(--red)"></span>Валидация<span class="count">4</span></h2>
+    <div class="val err">
+      <div class="ic">❌</div>
+      <div><div class="t">Пересечение модулей</div><div class="d">«Коридор» пересекается с «Санузел» · OVERLAP</div></div>
+    </div>
+    <div class="val warn">
+      <div class="ic">⚠️</div>
+      <div><div class="t">Эвакуационный путь</div><div class="d">Расстояние 27.4 м &gt; 25 м · СП 1.13130</div></div>
+    </div>
+    <div class="val warn">
+      <div class="ic">⚠️</div>
+      <div><div class="t">Мокрые зоны</div><div class="d">Требуется ввод водоснабжения · NO_WATER_INPUT</div></div>
+    </div>
+    <div class="val warn">
+      <div class="ic">⚠️</div>
+      <div><div class="t">Связность</div><div class="d">1 модуль изолирован от основной группы</div></div>
+    </div>
+    <div class="val ok">
+      <div class="ic">✅</div>
+      <div><div class="t">Пожарные извещатели</div><div class="d">Присутствуют во всех модулях</div></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:var(--purple)"></span>Инженерные системы</h2>
+    <div class="sys">
+      <div class="chip on"><span class="st">●</span> Вентиляция</div>
+      <div class="chip on"><span class="st">●</span> Водоснабжение</div>
+      <div class="chip on"><span class="st">●</span> Канализация</div>
+      <div class="chip on"><span class="st">●</span> Электрика</div>
+      <div class="chip"><span class="st">○</span> Отопление</div>
+      <div class="chip on"><span class="st">●</span> Пожаротушение</div>
+      <div class="chip"><span class="st">○</span> Кондиционирование</div>
+      <div class="chip on"><span class="st">●</span> Слаботочка</div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat"><span class="k">Кабель ВВГнг</span><span class="v">315 м</span></div>
+    <div class="stat"><span class="k">Автоматы</span><span class="v">42 шт</span></div>
+    <div class="stat"><span class="k">Радиаторы</span><span class="v">11 шт</span></div>
+    <div class="stat"><span class="k">Воздуховоды</span><span class="v">82 м</span></div>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:var(--green)"></span>Смета (предварительно)</h2>
+    <div class="estimate">
+      <div class="est-row"><span class="k">Материалы</span><span class="v">2 847 500 ₽</span></div>
+      <div class="est-row"><span class="k">Логистика (8%)</span><span class="v">227 800 ₽</span></div>
+      <div class="est-row"><span class="k">Монтаж (25%)</span><span class="v">711 875 ₽</span></div>
+      <div class="est-row"><span class="k">Накладные (15%)</span><span class="v">568 076 ₽</span></div>
+      <div class="est-row"><span class="k">Прибыль (20%)</span><span class="v">870 050 ₽</span></div>
+      <div class="est-row vat"><span class="k">НДС 20%</span><span class="v">1 045 060 ₽</span></div>
+      <div class="est-row total"><span class="k">Итого с НДС</span><span class="v">6 270 361 ₽</span></div>
+    </div>
+    <div class="divider"></div>
+    <div class="stat"><span class="k">Цена за м²</span><span class="v">61 114 ₽</span></div>
+    <div class="stat"><span class="k">Регион</span><span class="v">Москва ×1.25</span></div>
+  </div>
+</div>
+
+<!-- Спецификация + статистика -->
+<div class="grid cols">
+  <div class="card">
+    <h2><span class="dot" style="background:var(--cyan)"></span>Спецификация материалов</h2>
+    <table>
+      <thead><tr><th>Наименование</th><th>Ед.</th><th>Кол-во</th><th>Цена</th><th>Сумма</th></tr></thead>
+      <tbody>
+        <tr><td>Каркас модуля БМЗ (80×80×3)</td><td>кг</td><td>2 850</td><td>85 ₽</td><td>242 250 ₽</td></tr>
+        <tr><td>Сэндвич-панель 150 мм</td><td>м²</td><td>412</td><td>1 850 ₽</td><td>762 200 ₽</td></tr>
+        <tr><td>Утеплитель Rockwool 150</td><td>м³</td><td>38</td><td>4 500 ₽</td><td>171 000 ₽</td></tr>
+        <tr><td>Профлист Н60-845 (пол)</td><td>м²</td><td>108</td><td>650 ₽</td><td>70 200 ₽</td></tr>
+        <tr><td>Окна ПВХ (1.2×1.0)</td><td>шт</td><td>24</td><td>8 500 ₽</td><td>204 000 ₽</td></tr>
+        <tr><td>Двери межкомнатные</td><td>шт</td><td>9</td><td>12 000 ₽</td><td>108 000 ₽</td></tr>
+        <tr><td>Электрика (комплект)</td><td>компл</td><td>7</td><td>45 000 ₽</td><td>315 000 ₽</td></tr>
+        <tr><td>Сантехника (санузел+кухня)</td><td>компл</td><td>2</td><td>85 000 ₽</td><td>170 000 ₽</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <h2><span class="dot" style="background:var(--yellow)"></span>Сводка по проекту</h2>
+    <div class="stat"><span class="k">Тип здания</span><span class="v">БМЗ (блочно-модульное)</span></div>
+    <div class="stat"><span class="k">Модулей</span><span class="v">7</span></div>
+    <div class="stat"><span class="k">Этажность</span><span class="v">1</span></div>
+    <div class="stat"><span class="k">Габариты (Д×Ш×В)</span><span class="v">18 × 9 × 2.8 м</span></div>
+    <div class="stat"><span class="k">Площадь застройки</span><span class="v">162 м²</span></div>
+    <div class="stat"><span class="k">Полезная площадь</span><span class="v">102.6 м²</span></div>
+    <div class="stat"><span class="k">Строительный объём</span><span class="v">287.3 м³</span></div>
+    <div class="stat"><span class="k">Общий вес</span><span class="v">8 540 кг</span></div>
+    <div class="divider"></div>
+    <div class="stat"><span class="k">Регион</span><span class="v">Москва</span></div>
+    <div class="stat"><span class="k">Логистика</span><span class="v">Локальная (5%)</span></div>
+    <div class="stat"><span class="k">Тип монтажа</span><span class="v">БМЗ (25%)</span></div>
+    <div class="stat"><span class="k">НДС</span><span class="v">20%</span></div>
+    <div class="divider"></div>
+    <div class="stat"><span class="k">Статус валидации</span><span class="v r">1 ошибка</span></div>
+    <div class="stat"><span class="k">Готовность к смете</span><span class="v y">78%</span></div>
+  </div>
+</div>
+
+<!-- Экспорт -->
+<div class="card">
+  <h2><span class="dot" style="background:var(--accent)"></span>Экспорт и интеграции</h2>
+  <div class="sys">
+    <div class="chip on"><span class="st">●</span> PDF-смета</div>
+    <div class="chip on"><span class="st">●</span> Excel / CSV</div>
+    <div class="chip"><span class="st">○</span> 1С: СметаЗаказчика</div>
+    <div class="chip"><span class="st">○</span> IFC / BIM</div>
+    <div class="chip"><span class="st">○</span> AR-примерка</div>
+    <div class="chip on"><span class="st">●</span> JSON API</div>
+  </div>
+</div>
+
+<div class="footer">
+  Дашборд Конфигуратора БМЗ · демонстрационные данные · 2026
+</div>
+
+</body>
+</html>
